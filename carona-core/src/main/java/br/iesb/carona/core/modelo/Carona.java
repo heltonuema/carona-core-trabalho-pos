@@ -43,6 +43,7 @@ public class Carona {
 	}
 	
 	public Destino getDestino(){
+		
 		return this.destino;
 	}
 	
