@@ -13,7 +13,6 @@ public class Carona {
 	private Destino destino;
 	
 	public List<Usuario> getPassageiros(){
-		
 		return this.passageiros;
 	}
 	
