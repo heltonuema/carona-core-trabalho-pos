@@ -47,4 +47,25 @@ public class Carona {
 		return this.destino;
 	}
 	
+	
+	public void setMaximoPassageiros(int maximo){
+		this.maximoPassageiros = maximo;
+	}
+	
+	public void setMotorista(final Usuario motorista){
+		this.motorista = motorista;
+	}
+	
+	public void setHotario(final Horario horario){
+		this.horario = horario;
+	}
+
+	public void setPontoDePartida(final String pontoDePartida){
+		this.pontoDePartida = pontoDePartida;
+	}
+
+	public void setDestino(final Destino destino){
+		this.destino = destino;
+	}
+	
 }
