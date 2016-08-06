@@ -11,6 +11,15 @@ public class Carona {
 	private Horario horario;
 	private String pontoDePartida;
 	private Destino destino;
+	private long id;
+	
+	public void setId(long id){
+		this.id = id;
+	}
+	
+	public long getId(){
+		return this.id;
+	}
 	
 	public List<Usuario> getPassageiros(){
 		return this.passageiros;
@@ -56,7 +65,7 @@ public class Carona {
 		this.motorista = motorista;
 	}
 	
-	public void setHotario(final Horario horario){
+	public void setHorario(final Horario horario){
 		this.horario = horario;
 	}
 
