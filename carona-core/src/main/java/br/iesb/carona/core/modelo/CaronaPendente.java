@@ -25,4 +25,44 @@ public class CaronaPendente {
 		this.idCarona = idCarona;
 	}
 	
+	@Override
+	public boolean equals(final Object object){
+		if(object instanceof CaronaPendente){
+			CaronaPendente caronaCompare = (CaronaPendente) object;
+			if((caronaCompare.getAprovador() == null && this.aprovador == null) ||
+					caronaCompare.getAprovador().equals(this.aprovador)){
+				if((caronaCompare.getSolicitante() == null && this.solicitante == null) || 
+						caronaCompare.getSolicitante().equals(this.solicitante)){
+					if(caronaCompare.getIdCarona() == this.idCarona){
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode(){
+
+		String hashRetorno = new String();
+		if(this.aprovador != null){
+			hashRetorno = hashRetorno.concat(this.aprovador);
+		}
+		else{
+			hashRetorno = hashRetorno.concat("null");
+		}
+		
+		if(this.solicitante != null){
+			hashRetorno = hashRetorno.concat(this.aprovador);
+		}
+		else{
+			hashRetorno = hashRetorno.concat("null");
+		}
+		
+		hashRetorno = hashRetorno.concat(String.valueOf(this.idCarona));
+		
+		return hashRetorno.hashCode();
+	}
+	
 }
