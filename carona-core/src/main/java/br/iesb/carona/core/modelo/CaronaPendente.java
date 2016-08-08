@@ -5,7 +5,14 @@ public class CaronaPendente {
 	private String solicitante;
 	private String aprovador;
 	private long idCarona;
+	private long idCaronaPendente;
 	
+	public long getIdCaronaPendente(){
+		return this.idCaronaPendente;
+	}
+	public void setIdCaronaPendente(final long idCaronaPendente){
+		this.idCaronaPendente = idCaronaPendente;
+	}
 	public String getSolicitante() {
 		return solicitante;
 	}
