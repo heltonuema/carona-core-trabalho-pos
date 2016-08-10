@@ -1,25 +1,21 @@
 package br.iesb.carona.core.client;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Type;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -35,6 +31,9 @@ public class CaronaClient {
 	private final Usuario usuario;
 	private String serverAddress;
 
+	public static final String COMO_SOLICITANTE = "/carona-iesb/api/caronas/listaAguardandoAprovacao/";
+	public static final String COMO_APROVADOR = "/carona-iesb/api/caronas/listaSolicitacoes/";
+	
 	public CaronaClient(final Usuario usuario, final String serverAdress) {
 		this.usuario = usuario;
 		this.serverAddress = serverAdress;
@@ -44,23 +43,12 @@ public class CaronaClient {
 	/**
 	 * Faz o cadastro de um usuário novo no servidor e retorna a mensagem de
 	 * erro ou sucesso
-	 * 
-	 * @throws ClientProtocolException
-	 * @throws IOException
+	 * @throws Exception 
 	 */
-	public String cadastrarUsuario() throws ClientProtocolException, IOException {
-
-		HttpClient client = new DefaultHttpClient();
-		HttpPost post = new HttpPost();
-		HttpEntity entity = new StringEntity(new Gson().toJson(usuario), "UTF-8");
+	public String cadastrarUsuario() throws Exception {
 
 		URI uri = URI.create(serverAddress + "/carona-iesb/api/usuarios/inclui");
-		post.setEntity(entity);
-		post.addHeader("Content-type", "application/json");
-		post.setURI(uri);
-		HttpResponse response = client.execute(post);
-
-		return new String(CaronaClient.getStringFromInputStream(response.getEntity().getContent()));
+		return new String(CaronaClient.getStringFromInputStream(doPost(uri, new Gson().toJson(usuario))));
 	}
 
 	/**
@@ -79,7 +67,7 @@ public class CaronaClient {
 	 */
 
 	public Carona oferecerCarona(final String pontoPartida, final Horario horario, final String localDestino,
-			final String bairroDestino, final int maximoPassageiros) throws ClientProtocolException, IOException {
+			final String bairroDestino, final int maximoPassageiros) throws Exception {
 
 		Destino destino = new Destino();
 		destino.setLocal(localDestino);
@@ -92,44 +80,27 @@ public class CaronaClient {
 		carona.setHorario(horario);
 		carona.setDestino(destino);
 
-		HttpClient client = new DefaultHttpClient();
-		HttpPost post = new HttpPost();
-		HttpEntity entity = new StringEntity(new Gson().toJson(carona), "UTF-8");
-
 		URI uri = URI.create(serverAddress + "/carona-iesb/api/caronas/oferecer");
-		post.setEntity(entity);
-		post.addHeader("Content-type", "application/json");
-		post.setURI(uri);
-		HttpResponse response = client.execute(post);
 
-		if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-			throw new RuntimeException(
-					"Carona não incluída: " + CaronaClient.getStringFromInputStream(response.getEntity().getContent()));
-		}
-
-		return new Gson().fromJson(CaronaClient.getStringFromInputStream(response.getEntity().getContent()),
-				Carona.class);
+		String retorno = getStringFromInputStream(doPost(uri, new Gson().toJson(carona)));
+		return new Gson().fromJson(retorno, Carona.class);
 	}
-
+	
 	/**
 	 * Faz solicitação para inclusão do usuário em uma carona e retorna a
 	 * mensagem devolvida pelo servidor
 	 * 
 	 * @param idCarona
 	 * @return
-	 * @throws ClientProtocolException
-	 * @throws IOException
+	 * @throws Exception 
 	 */
-	public String solicitarParticipacaoCarona(final String idCarona) throws ClientProtocolException, IOException {
+	public String solicitarParticipacaoCarona(final String idCarona) throws Exception {
 
-		HttpClient client = new DefaultHttpClient();
-		HttpPost post = new HttpPost();
+		
 		URI uri = URI.create(serverAddress + "/carona-iesb/api/caronas/solicitarParticipacao/" + idCarona + "/"
 				+ usuario.getEmail());
-		post.setURI(uri);
-		HttpResponse response = client.execute(post);
-
-		return getStringFromInputStream(response.getEntity().getContent());
+		
+		return getStringFromInputStream(doPost(uri,""));
 	}
 
 	/**
@@ -138,20 +109,15 @@ public class CaronaClient {
 	 * @param idCaronaPendente
 	 * @param aprovar
 	 * @return Mensagem devolvida pelo servidor
-	 * @throws ClientProtocolException
-	 * @throws IOException
+	 * @throws Exception 
 	 */
 	public String despacharSolicitacaoCarona(final long idCaronaPendente, final boolean aprovar)
-			throws ClientProtocolException, IOException {
+			throws Exception {
 
-		HttpClient client = new DefaultHttpClient();
-		HttpPost post = new HttpPost();
-		URI uri = URI.create(serverAddress + "/carona-iesb/api/caronas/despacharSolicitacao/" + 
-							String.valueOf(idCaronaPendente) + "/"+ String.valueOf(aprovar));
-		post.setURI(uri);
-		HttpResponse response = client.execute(post);
+		URI uri = URI.create(serverAddress + "/carona-iesb/api/caronas/despacharSolicitacao/"
+				+ String.valueOf(idCaronaPendente) + "/" + String.valueOf(aprovar));
 
-		return getStringFromInputStream(response.getEntity().getContent());
+		return getStringFromInputStream(doPost(uri, ""));
 	}
 
 	/**
@@ -159,60 +125,50 @@ public class CaronaClient {
 	 * 
 	 * @param idCaronaPendente
 	 * @return Mensagem devolvida pelo servidor
-	 * @throws ClientProtocolException
-	 * @throws IOException
+	 * @throws Exception 
 	 */
-	public String cancelarSolicitacaoCarona(final long idCaronaPendente) throws ClientProtocolException, IOException {
-		HttpClient client = new DefaultHttpClient();
-		HttpPost post = new HttpPost();
+	public String cancelarSolicitacaoCarona(final long idCaronaPendente) throws Exception {
+		
 		URI uri = URI.create(serverAddress + "/despacharSolicitacao/" + String.valueOf(idCaronaPendente) + "/false");
-		post.setURI(uri);
-		HttpResponse response = client.execute(post);
-
-		return getStringFromInputStream(response.getEntity().getContent());
+		
+		return getStringFromInputStream(doPost(uri,""));
 	}
 
-	public List<CaronaPendente> consultaSolicitacaoAprovador()
-			throws ClientProtocolException, IOException {
+	public List<CaronaPendente> consultaSolicitacaoPendente(final String solicitanteOuAprovador) throws Exception {
 
 		List<CaronaPendente> retorno = new ArrayList<CaronaPendente>();
 
-		URI uri = URI.create(serverAddress + "/carona-iesb/api/caronas/listaSolicitacoes/" + this.usuario.getEmail());
+		URI uri = URI.create(serverAddress + solicitanteOuAprovador + this.usuario.getEmail());
 
-		String caronaJson = getStringFromInputStream(executaRequisicao(new HttpGet(), uri).getEntity().getContent());
+		String caronaJson = getStringFromInputStream(doGet(uri));
 		Gson gson = new Gson();
 
-		Type type = new TypeToken<List<CaronaPendente>>() {}.getType();
+		Type type = new TypeToken<List<CaronaPendente>>() {
+		}.getType();
 		retorno.addAll(gson.fromJson(caronaJson, type));
 
 		return retorno;
 	}
 
-	public List<Carona> consultaCarona(final String partida, final String localDestino, final String bairroDestino)
-			throws ClientProtocolException, IOException {
+	public List<Carona> consultaCarona(final String partida, final String localDestino, final String bairroDestino, final boolean somenteDisponiveis)
+			throws Exception {
 
 		List<Carona> retorno = new ArrayList<Carona>();
 
-		String queryParam = new String();
+		String queryParam = "somenteDisponiveis=" + String.valueOf(somenteDisponiveis);
 		if (!isNullOrEmpty(partida)) {
-			queryParam = queryParam.concat("partida=" + URLEncoder.encode(partida, "UTF-8"));
+			queryParam = queryParam.concat("&partida=" + URLEncoder.encode(partida, "UTF-8"));
 		}
 		if (!isNullOrEmpty(localDestino)) {
-			if (!queryParam.isEmpty()) {
-				queryParam = queryParam.concat("&");
-			}
-			queryParam = queryParam.concat("localDestino=" + URLEncoder.encode(localDestino, "UTF-8"));
+			queryParam = queryParam.concat("&localDestino=" + URLEncoder.encode(localDestino, "UTF-8"));
 		}
 		if (!isNullOrEmpty(bairroDestino)) {
-			if (!queryParam.isEmpty()) {
-				queryParam = queryParam.concat("&");
-			}
-			queryParam = queryParam.concat("bairroDestino=" + URLEncoder.encode(bairroDestino, "UTF-8"));
+			queryParam = queryParam.concat("&bairroDestino=" + URLEncoder.encode(bairroDestino, "UTF-8"));
 		}
 
 		URI uri = URI.create(serverAddress + "/carona-iesb/api/caronas/consulta?" + queryParam);
 
-		String caronaJson = getStringFromInputStream(executaRequisicao(new HttpGet(), uri).getEntity().getContent());
+		String caronaJson = getStringFromInputStream(doGet(uri));
 		Gson gson = new Gson();
 
 		Type type = new TypeToken<List<Carona>>() {
@@ -220,13 +176,6 @@ public class CaronaClient {
 		retorno.addAll(gson.fromJson(caronaJson, type));
 
 		return retorno;
-	}
-	
-	private HttpResponse executaRequisicao(final HttpRequestBase method, final URI uri)
-			throws ClientProtocolException, IOException {
-		HttpClient client = new DefaultHttpClient();
-		method.setURI(uri);
-		return client.execute(method);
 	}
 
 	public static boolean isNullOrEmpty(final String string) {
@@ -236,6 +185,53 @@ public class CaronaClient {
 		return false;
 	}
 
+	private InputStream doGet(final URI uri)
+			throws Exception {
+		URL url = uri.toURL();
+		HttpURLConnection conn = null;
+		try {
+			conn = (HttpURLConnection) url.openConnection();
+			conn.connect();
+		} finally {
+			conn.disconnect();
+		}
+
+		if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+			
+			throw new RuntimeException(conn.getResponseMessage());
+		}
+
+		return conn.getInputStream();
+	}
+	
+	private InputStream doPost(final URI uri, final String content)throws Exception{
+		URL url = uri.toURL();
+		HttpURLConnection conn = null;
+		try {
+			conn = (HttpURLConnection) url.openConnection();
+			
+			conn.setRequestProperty("Content-type", "application/json");
+			conn.setDoOutput(true);
+			
+			OutputStream outputStream = conn.getOutputStream();
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(outputStream));
+			bw.write(content);
+			bw.flush();
+			bw.close();
+			conn.connect();
+		} finally {
+			conn.disconnect();
+		}
+
+		if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+			
+			throw new RuntimeException(
+					"Carona não incluída");
+		}
+
+		return conn.getInputStream();
+	}
+	
 	public static String getStringFromInputStream(final InputStream inputStream) throws IOException {
 		StringBuilder retorno = new StringBuilder();
 
